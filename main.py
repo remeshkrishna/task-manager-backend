@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, EmailStr
 from enum import Enum
 from fastapi.middleware.cors import CORSMiddleware
@@ -59,38 +59,78 @@ class Task(BaseModel):
 def home():
     return {"message":"success"}
 
-@app.post("/signup",response_model=Union[UserOutput , dict],status_code=201)
+@app.post("/signup",
+          response_model=Union[UserOutput , dict],
+          tags=["users"],
+          status_code=201,
+          responses={
+              409: {
+                  "content":{
+                      "application/json":{
+                          "example": {"detail": "User already exist"}
+                      }
+                  }
+              }
+          })
 def signup(user: SignupInput):
     print("entered function")
     user_found = [i for i in users if i.email==user.email]
     if user_found:
-        return {"message":"Email already exist"}
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"message":"Email already exist"})
     new_user = User(id=len(users)+1,email = user.email, password=user.password,name= user.name)
     users.append(new_user)
     return new_user
 
-@app.post("/signin",response_model=Union[UserOutput , dict], status_code=200) #we can use either Union or | We selected Union because it is backward compatible..and | is introduced in python 3.10 
+@app.post("/signin",
+          response_model=Union[UserOutput , dict],
+          tags=["users"],
+          status_code=200,
+          responses={
+              401: {
+                  "description": "Unauthorized",
+                  "content":{
+                      "application/json":{
+                          "example":{"detail":"Invalid credentials"}
+                      }
+                  }
+              },
+              404: {
+                  "description":"User not found",
+                  "content":{
+                      "application/json":{
+                          "example": {"detail":"User not exist"}
+                      }
+                  }
+              }
+          }) #we can use either Union or | We selected Union because it is backward compatible..and | is introduced in python 3.10 
 def signin(user: LoginInput):
     user_found = [i for i in users if i.email==user.email]
     print(user_found)
     if user_found:
         if user.password == user_found[0].password:
-            print("found")
             return user_found[0]
         else:
-            return {"message": "Authentication Failed"}
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials"
+                )
     else:
-        return {"message":"Invalid User"}
+        raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not exist"
+                )
 
-@app.get('/users' ,response_model=list[UserOutput],status_code=200)
+@app.get('/users' ,response_model=list[UserOutput],status_code=200, tags=["users"])
 def get_all_users():
     return users
 
-@app.get('/tasks' ,response_model=list[Task],status_code=200)
+@app.get('/tasks' ,response_model=list[Task],status_code=200,tags=["tasks"])
 def get_tasks():
     return tasks
 
-@app.post('/tasks',status_code=201)
+@app.post('/tasks',status_code=201,tags=["tasks"])
 def add_task(task: Task):
     tasks.append(task)
     return task
