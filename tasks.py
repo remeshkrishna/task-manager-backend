@@ -24,7 +24,7 @@ def add_task(task:TaskIn, session: session_dependency):
     session.refresh(new_task)
     return  new_task
 
-@router.get('/tasks/{task_id}')
+@router.get('/tasks/{task_id}',response_model=Task)
 def get_task(task_id: int, session: session_dependency):
     query = select(Task).where(Task.id==task_id)
     task = session.exec(query).first()
