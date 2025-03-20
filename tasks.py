@@ -24,6 +24,13 @@ def add_task(task:TaskIn, session: session_dependency):
     session.refresh(new_task)
     return  new_task
 
+@router.get('/tasks/mytasks',response_model=list[Task])
+def get_my_tasklist(user: Annotated[User,Depends(get_current_user)],session: session_dependency):
+    user_id = user.id
+    query = select(Task).where(Task.user_id==user_id)
+    taskList = session.exec(query).all()
+    return taskList
+
 @router.get('/tasks/{task_id}',response_model=Task)
 def get_task(task_id: int, session: session_dependency):
     query = select(Task).where(Task.id==task_id)
@@ -34,3 +41,12 @@ def get_task(task_id: int, session: session_dependency):
             detail="Task Not Found"
         )
     return task
+
+@router.delete('/deletetask/{task_id}',status_code=status.HTTP_204_NO_CONTENT)
+def delete_task(task_id: int, user: Annotated[User, Depends(get_current_user)] ,session: session_dependency):
+    query=select(Task).where(Task.id == task_id and Task.user_id==user.id)
+    task = session.exec(query).first()
+    if task:
+        session.delete(task)
+        session.commit()
+

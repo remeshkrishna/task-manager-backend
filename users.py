@@ -1,7 +1,7 @@
-from fastapi import APIRouter,HTTPException,status
-from typing import Union
+from fastapi import APIRouter,HTTPException,status,Depends
+from typing import Union,Annotated
 from .database import session_dependency,UserOut,UserIn,UserTable as User
-from .authentication import fetch_user,create_hashed_password
+from .authentication import fetch_user,create_hashed_password,get_current_user
 from sqlmodel import select,Session
 
 router=APIRouter(
@@ -59,4 +59,8 @@ def get_user(user_id: int,session: session_dependency):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
+    return user
+
+@router.get('/users/me',response_model=UserOut)
+def get_me(user: Annotated[UserOut,Depends(get_current_user)]):
     return user
