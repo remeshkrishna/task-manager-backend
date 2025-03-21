@@ -50,3 +50,14 @@ def delete_task(task_id: int, user: Annotated[User, Depends(get_current_user)] ,
         session.delete(task)
         session.commit()
 
+@router.put('/tasks/{task_id}',response_model=Task)
+def update_task(task_id:int, payload: TaskIn,user: Annotated[User,Depends(get_current_user)], session: session_dependency):
+    task = session.get(Task,task_id)
+    if task:
+        payload=payload.model_dump()
+        for key in payload:
+            setattr(task,key,payload[key])
+        session.add(task)
+        session.commit()
+        session.refresh(task)
+        return task
